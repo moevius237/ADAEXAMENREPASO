@@ -10,8 +10,6 @@ public class Main {
 
     public static void main(String[] args) {
         Prestamo prestamoi [] = new Prestamo[0];
-        prestamoi[1] ={"mo",10-10/2022,10/10/2023,"mo"};
-        metodoDeLaMuerte();
     }
     public static void metodoDeLaMuerte(Map<Integer, Prestamo[ ]> mapa){
         String existe = "SELECT * FROM libro WHERE id = ?";
@@ -32,32 +30,37 @@ public class Main {
                         con.commit();
                         Prestamo [] prestamos = entrada.getValue();
                         for (int i = 0; i < prestamos.length; i++) {
-                            if (prestamos[i].getFechaPrestamo().isAfter(LocalDateTime.now()) && prestamos[i].getFechaDevolucion().isBefore(LocalDateTime.now())){
+                            if (prestamos[i].getFechaPrestamo().isBefore(LocalDateTime.now()) && prestamos[i].getFechaDevolucion().isAfter(LocalDateTime.now())){
                                 prest.setString(1,prestamos[i].getUauario());
-                                prest.setDate(2,Date.valueOf(String.valueOf(prestamos[i].getFechaPrestamo())));
-                                prest.setDate(3,Date.valueOf(String.valueOf(prestamos[i].getFechaDevolucion())));
+                                prest.setTimestamp(2,Timestamp.valueOf(String.valueOf(prestamos[i].getFechaPrestamo())));
+                                prest.setTimestamp(3,Timestamp.valueOf(String.valueOf(prestamos[i].getFechaDevolucion())));
                                 prest.setInt(4,prestamos[i].getEjemplarID());
                                 prest.executeQuery();
-                                con.commit();
                             }
                         }
                     }
                 }
+                con.commit();
             }catch (SQLException e){
                 con.rollback();
+            }finally {
+                con.setAutoCommit(true);
             }
-            con.setAutoCommit(true);
         }catch (SQLException e){
             System.out.println("ERROR EN LA CONEXION");
         }
     }
     public static void printFavoriteBooks(int idLibro){
         try (final Connection con = DriverManager.getConnection(url)){
-            String selleeec = "SELECT l.titulo FROM libro l FULL JOIN ejemplar e ON e.libro_id = l.id FULL JOIN Prestamo p ON l.ejemplar_id = p.id WHERE l.id = ? GROUP BY p.ejemplar_id";
+            String selleeec = "SELECT l.titulo, COUNT(p.titulo)as cantidad_prestada FROM libro l JOIN ejemplar e ON e.libro_id = l.id FULL JOIN Prestamo p ON l.ejemplar_id = p.id WHERE l.id = ? GROUP BY l p.ejemplar_id HAVING COUNT(p.id) >0";
             con.setAutoCommit(false);
                 try (PreparedStatement prss = con.prepareStatement(selleeec)){
                     prss.setInt(1,idLibro);
-                    prss.executeQuery();
+                    ResultSet rs = prss.executeQuery();
+                    while (rs.next()){
+                        System.out.println(rs.getString("titulo"));
+                        System.out.println(rs.getInt("cantidad_prestada"));
+                    }
                     con.commit();
                 }catch (SQLException e){
                     con.rollback();
